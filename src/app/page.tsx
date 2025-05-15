@@ -5,26 +5,31 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Position, AsteroidObject, GameState } from '@/types';
 import ScoreDisplay from '@/components/game/score-display';
 import GameOverScreen from '@/components/game/game-over-screen';
-import GameArea from '@/components/game/game-area'; // Import GameArea
+import GameArea from '@/components/game/game-area';
 import { Button } from '@/components/ui/button';
-import { Play } from 'lucide-react';
+import { Play, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 
-const GAME_WIDTH = 800;
-const GAME_HEIGHT = 600;
-const SPACESHIP_SIZE = 40; // Slightly increased size for the new SVG
+const LOGICAL_GAME_WIDTH = 800;
+const LOGICAL_GAME_HEIGHT = 600;
+const SPACESHIP_SIZE = 40;
 const ASTEROID_MIN_SIZE = 20;
 const ASTEROID_MAX_SIZE = 60;
 const SPACESHIP_SPEED = 20;
-const ASTEROID_BASE_SPEED = 3.0;
+const ASTEROID_BASE_SPEED = 5.0; // Increased from 3.0
 const INITIAL_LIVES = 3;
-const ASTEROID_SPAWN_INTERVAL = 1000; //ms - Increased density
+const ASTEROID_SPAWN_INTERVAL = 1000; // ms
 const SCORE_INCREMENT_INTERVAL = 1000; // ms, for time-based score
 
 const SESSION_STORAGE_HIGH_SCORE_KEY = 'cosmicImpactHighScore';
 
 export default function CosmicImpactPage() {
+  const [actualGameDimensions, setActualGameDimensions] = useState({ 
+    width: LOGICAL_GAME_WIDTH, 
+    height: LOGICAL_GAME_HEIGHT 
+  });
+
   const [gameState, setGameState] = useState<GameState>({
-    spaceshipPosition: { x: GAME_WIDTH / 2 - SPACESHIP_SIZE / 2, y: GAME_HEIGHT - SPACESHIP_SIZE - 10 },
+    spaceshipPosition: { x: LOGICAL_GAME_WIDTH / 2 - SPACESHIP_SIZE / 2, y: LOGICAL_GAME_HEIGHT - SPACESHIP_SIZE - 10 },
     asteroids: [],
     score: 0,
     lives: INITIAL_LIVES,
@@ -37,6 +42,31 @@ export default function CosmicImpactPage() {
   const lastAsteroidSpawnTime = useRef<number>(0);
   const lastScoreIncrementTime = useRef<number>(0);
   const gameLoopId = useRef<number | null>(null);
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      const aspectRatio = LOGICAL_GAME_HEIGHT / LOGICAL_GAME_WIDTH;
+      // Constrain width to 95% of viewport or LOGICAL_GAME_WIDTH
+      let newWidth = Math.min(window.innerWidth * 0.95, LOGICAL_GAME_WIDTH);
+      // Ensure minimum width for very small screens if necessary, e.g., Math.max(newWidth, 300);
+      
+      let newHeight = newWidth * aspectRatio;
+
+      // Further constrain height if it's too tall for the viewport
+      const maxViewportHeight = window.innerHeight * 0.7; // Use 70% of viewport height for game area + controls
+      if (newHeight > maxViewportHeight) {
+        newHeight = maxViewportHeight;
+        newWidth = newHeight / aspectRatio;
+      }
+      
+      setActualGameDimensions({ width: newWidth, height: newHeight });
+    };
+
+    updateDimensions(); // Initial call
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
+
 
   const loadHighScore = useCallback(() => {
     const storedHighScore = sessionStorage.getItem(SESSION_STORAGE_HIGH_SCORE_KEY);
@@ -62,7 +92,7 @@ export default function CosmicImpactPage() {
   const resetGame = useCallback(() => {
     setGameState(prev => ({
       ...prev,
-      spaceshipPosition: { x: GAME_WIDTH / 2 - SPACESHIP_SIZE / 2, y: GAME_HEIGHT - SPACESHIP_SIZE * 2 },
+      spaceshipPosition: { x: LOGICAL_GAME_WIDTH / 2 - SPACESHIP_SIZE / 2, y: LOGICAL_GAME_HEIGHT - SPACESHIP_SIZE * 2 },
       asteroids: [],
       score: 0,
       lives: INITIAL_LIVES,
@@ -80,7 +110,7 @@ export default function CosmicImpactPage() {
 
   const spawnAsteroid = useCallback(() => {
     const size = Math.random() * (ASTEROID_MAX_SIZE - ASTEROID_MIN_SIZE) + ASTEROID_MIN_SIZE;
-    const x = Math.random() * (GAME_WIDTH - size);
+    const x = Math.random() * (LOGICAL_GAME_WIDTH - size);
     const newAsteroid: AsteroidObject = {
       id: crypto.randomUUID(),
       x,
@@ -99,6 +129,15 @@ export default function CosmicImpactPage() {
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
     keysPressed.current.delete(event.key.toLowerCase());
   }, []);
+
+  const handleButtonPress = useCallback((key: string) => {
+    keysPressed.current.add(key);
+  }, []);
+
+  const handleButtonRelease = useCallback((key: string) => {
+    keysPressed.current.delete(key);
+  }, []);
+
 
   useEffect(() => {
     if (!gameState.gameStarted || gameState.isGameOver) return;
@@ -131,8 +170,8 @@ export default function CosmicImpactPage() {
       if (keysPressed.current.has('arrowdown') || keysPressed.current.has('s')) newY += SPACESHIP_SPEED;
       
       spaceshipPosition = {
-        x: Math.max(0, Math.min(GAME_WIDTH - SPACESHIP_SIZE, newX)),
-        y: Math.max(0, Math.min(GAME_HEIGHT - SPACESHIP_SIZE, newY)),
+        x: Math.max(0, Math.min(LOGICAL_GAME_WIDTH - SPACESHIP_SIZE, newX)),
+        y: Math.max(0, Math.min(LOGICAL_GAME_HEIGHT - SPACESHIP_SIZE, newY)),
       };
 
       const updatedAsteroids = asteroids.map(a => ({ ...a, y: a.y + ASTEROID_BASE_SPEED })).filter(a => {
@@ -149,11 +188,10 @@ export default function CosmicImpactPage() {
           if (lives <= 0) {
             isGameOver = true;
           }
-          // Reset spaceship position slightly higher to avoid immediate re-collision if multiple asteroids are close
-          spaceshipPosition = { x: GAME_WIDTH / 2 - SPACESHIP_SIZE / 2, y: GAME_HEIGHT - SPACESHIP_SIZE * 2 - 20 };
+          spaceshipPosition = { x: LOGICAL_GAME_WIDTH / 2 - SPACESHIP_SIZE / 2, y: LOGICAL_GAME_HEIGHT - SPACESHIP_SIZE * 2 - 20 };
           return false; 
         }
-        return a.y < GAME_HEIGHT; 
+        return a.y < LOGICAL_GAME_HEIGHT; 
       });
       
       asteroids = updatedAsteroids;
@@ -196,14 +234,14 @@ export default function CosmicImpactPage() {
 
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 relative select-none">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 relative select-none overflow-hidden">
       <ScoreDisplay score={gameState.score} lives={gameState.lives} highScore={gameState.highScore} />
 
       {!gameState.gameStarted && (
-        <div className="flex flex-col items-center">
-           <h1 className="text-6xl font-bold mb-8 text-primary font-mono">Cosmic Impact</h1>
-          <Button onClick={startGame} size="lg" className="px-8 py-6 text-2xl">
-            <Play className="mr-2 h-8 w-8" /> Start Game
+        <div className="flex flex-col items-center text-center">
+           <h1 className="text-5xl md:text-6xl font-bold mb-8 text-primary font-mono">Cosmic Impact</h1>
+          <Button onClick={startGame} size="lg" className="px-8 py-6 text-xl md:text-2xl">
+            <Play className="mr-2 h-7 w-7 md:h-8 md:w-8" /> Start Game
           </Button>
         </div>
       )}
@@ -212,8 +250,10 @@ export default function CosmicImpactPage() {
         <GameArea
           spaceship={{ position: gameState.spaceshipPosition, size: SPACESHIP_SIZE }}
           asteroids={gameState.asteroids}
-          width={GAME_WIDTH}
-          height={GAME_HEIGHT}
+          actualWidth={actualGameDimensions.width}
+          actualHeight={actualGameDimensions.height}
+          logicalWidth={LOGICAL_GAME_WIDTH}
+          logicalHeight={LOGICAL_GAME_HEIGHT}
         />
       )}
 
@@ -222,7 +262,61 @@ export default function CosmicImpactPage() {
       )}
       
       {gameState.gameStarted && !gameState.isGameOver && (
-        <p className="mt-4 text-muted-foreground font-mono">Use Arrow Keys or WASD to move</p>
+        <>
+          <div className="flex flex-col items-center mt-4 space-y-1 md:space-y-2">
+            <Button
+              size="lg"
+              className="p-3 md:p-4"
+              aria-label="Move Up"
+              onMouseDown={() => handleButtonPress('arrowup')}
+              onMouseUp={() => handleButtonRelease('arrowup')}
+              onTouchStart={(e) => { e.preventDefault(); handleButtonPress('arrowup'); }}
+              onTouchEnd={(e) => { e.preventDefault(); handleButtonRelease('arrowup'); }}
+              onMouseLeave={() => handleButtonRelease('arrowup')} 
+            >
+              <ArrowUp className="h-6 w-6 md:h-8 md:w-8" />
+            </Button>
+            <div className="flex space-x-6 md:space-x-8">
+              <Button
+                size="lg"
+                className="p-3 md:p-4"
+                aria-label="Move Left"
+                onMouseDown={() => handleButtonPress('arrowleft')}
+                onMouseUp={() => handleButtonRelease('arrowleft')}
+                onTouchStart={(e) => { e.preventDefault(); handleButtonPress('arrowleft'); }}
+                onTouchEnd={(e) => { e.preventDefault(); handleButtonRelease('arrowleft'); }}
+                onMouseLeave={() => handleButtonRelease('arrowleft')}
+              >
+                <ArrowLeft className="h-6 w-6 md:h-8 md:w-8" />
+              </Button>
+              <Button
+                size="lg"
+                className="p-3 md:p-4"
+                aria-label="Move Right"
+                onMouseDown={() => handleButtonPress('arrowright')}
+                onMouseUp={() => handleButtonRelease('arrowright')}
+                onTouchStart={(e) => { e.preventDefault(); handleButtonPress('arrowright'); }}
+                onTouchEnd={(e) => { e.preventDefault(); handleButtonRelease('arrowright'); }}
+                onMouseLeave={() => handleButtonRelease('arrowright')}
+              >
+                <ArrowRight className="h-6 w-6 md:h-8 md:w-8" />
+              </Button>
+            </div>
+            <Button
+              size="lg"
+              className="p-3 md:p-4"
+              aria-label="Move Down"
+              onMouseDown={() => handleButtonPress('arrowdown')}
+              onMouseUp={() => handleButtonRelease('arrowdown')}
+              onTouchStart={(e) => { e.preventDefault(); handleButtonPress('arrowdown'); }}
+              onTouchEnd={(e) => { e.preventDefault(); handleButtonRelease('arrowdown'); }}
+              onMouseLeave={() => handleButtonRelease('arrowdown')}
+            >
+              <ArrowDown className="h-6 w-6 md:h-8 md:w-8" />
+            </Button>
+          </div>
+          <p className="mt-3 text-muted-foreground font-mono text-xs md:text-sm text-center">Use Arrow Keys, WASD, or On-Screen Controls to move</p>
+        </>
       )}
     </div>
   );

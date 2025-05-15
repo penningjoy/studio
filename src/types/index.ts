@@ -6,14 +6,15 @@ export interface Position {
 
 export interface GameObject extends Position {
   id: string;
-  size: number;
-  width: number;
-  height: number;
+  size: number; // Logical size
+  width: number; // Logical width
+  height: number; // Logical height
 }
 
+// Represents the logical data for a spaceship
 export interface SpaceshipProps {
-  position: Position;
-  size: number;
+  position: Position; // Logical position
+  size: number;     // Logical size
 }
 
 export interface AsteroidObject extends GameObject {
@@ -21,8 +22,8 @@ export interface AsteroidObject extends GameObject {
 }
 
 export interface GameState {
-  spaceshipPosition: Position;
-  asteroids: AsteroidObject[];
+  spaceshipPosition: Position; // Logical position
+  asteroids: AsteroidObject[]; // Asteroids with logical positions and sizes
   score: number;
   lives: number;
   isGameOver: boolean;
