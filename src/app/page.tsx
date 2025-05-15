@@ -15,12 +15,12 @@ const SPACESHIP_SIZE = 50;
 const ASTEROID_MIN_SIZE = 20;
 const ASTEROID_MAX_SIZE = 60;
 const SPACESHIP_SPEED = 20;
-const INITIAL_ASTEROID_BASE_SPEED = 1.0; // Adjusted for initial slower speed
+const INITIAL_ASTEROID_BASE_SPEED = 1.0; 
 const MAX_ASTEROID_SPEED = 7.0;
-const INITIAL_LIVES = 5; // Updated from 3 to 5
-const INITIAL_ASTEROID_SPAWN_INTERVAL = 1000; // ms, increased density
-const MIN_ASTEROID_SPAWN_INTERVAL = 500; // ms
-const SCORE_INCREMENT_INTERVAL = 1000; // ms, for time-based score
+const INITIAL_LIVES = 5; 
+const INITIAL_ASTEROID_SPAWN_INTERVAL = 1000; 
+const MIN_ASTEROID_SPAWN_INTERVAL = 500; 
+const SCORE_INCREMENT_INTERVAL = 1000; 
 
 const SESSION_STORAGE_HIGH_SCORE_KEY = 'cosmicImpactHighScore';
 
@@ -51,7 +51,7 @@ export default function CosmicImpactPage() {
       let newWidth = Math.min(window.innerWidth * 0.95, LOGICAL_GAME_WIDTH);
       let newHeight = newWidth * aspectRatio;
 
-      const maxGameAreaViewportHeightPercentage = 0.65; // Adjusted from 0.7 to prevent overlap
+      const maxGameAreaViewportHeightPercentage = 0.65; 
       const maxViewportHeight = window.innerHeight * maxGameAreaViewportHeightPercentage; 
       if (newHeight > maxViewportHeight) {
         newHeight = maxViewportHeight;
@@ -118,7 +118,7 @@ export default function CosmicImpactPage() {
       width: size,
       height: size,
       rotation: 0,
-      rotationSpeed: (Math.random() - 0.5) * 4, // Random speed between -2 and 2 deg/frame
+      rotationSpeed: (Math.random() - 0.5) * 4, 
     };
     setGameState(prev => ({ ...prev, asteroids: [...prev.asteroids, newAsteroid] }));
   }, []);
@@ -160,11 +160,11 @@ export default function CosmicImpactPage() {
     const currentScore = gameState.score;
     const currentAsteroidSpeed = Math.min(
       MAX_ASTEROID_SPEED,
-      INITIAL_ASTEROID_BASE_SPEED + Math.floor(currentScore / 250) * 0.25 // Speed increases every 250 points
+      INITIAL_ASTEROID_BASE_SPEED + Math.floor(currentScore / 250) * 0.25 
     );
     const currentSpawnInterval = Math.max(
       MIN_ASTEROID_SPAWN_INTERVAL,
-      INITIAL_ASTEROID_SPAWN_INTERVAL - Math.floor(currentScore / 100) * 50 // Interval decreases every 100 points
+      INITIAL_ASTEROID_SPAWN_INTERVAL - Math.floor(currentScore / 100) * 50 
     );
 
     setGameState(prev => {
@@ -203,7 +203,7 @@ export default function CosmicImpactPage() {
           if (lives <= 0) {
             isGameOver = true;
           }
-          // Reset spaceship position slightly higher to avoid immediate re-collision if possible
+          
           spaceshipPosition = { x: LOGICAL_GAME_WIDTH / 2 - SPACESHIP_SIZE / 2, y: LOGICAL_GAME_HEIGHT - SPACESHIP_SIZE * 2 - 20 };
           return false; 
         }
@@ -217,7 +217,7 @@ export default function CosmicImpactPage() {
         lastScoreIncrementTime.current = Date.now();
       }
       
-      if (isGameOver && !prev.isGameOver) { // Check if game over state just changed
+      if (isGameOver && !prev.isGameOver) { 
           saveHighScore(score);
       }
 
@@ -288,7 +288,6 @@ export default function CosmicImpactPage() {
               onMouseUp={() => handleButtonRelease('arrowup')}
               onTouchStart={(e) => { e.preventDefault(); handleButtonPress('arrowup'); }}
               onTouchEnd={(e) => { e.preventDefault(); handleButtonRelease('arrowup'); }}
-              onMouseLeave={() => handleButtonRelease('arrowup')} 
             >
               <ArrowUp className="h-6 w-6 md:h-8 md:w-8" />
             </Button>
@@ -301,7 +300,6 @@ export default function CosmicImpactPage() {
                 onMouseUp={() => handleButtonRelease('arrowleft')}
                 onTouchStart={(e) => { e.preventDefault(); handleButtonPress('arrowleft'); }}
                 onTouchEnd={(e) => { e.preventDefault(); handleButtonRelease('arrowleft'); }}
-                onMouseLeave={() => handleButtonRelease('arrowleft')}
               >
                 <ArrowLeft className="h-6 w-6 md:h-8 md:w-8" />
               </Button>
@@ -313,7 +311,6 @@ export default function CosmicImpactPage() {
                 onMouseUp={() => handleButtonRelease('arrowright')}
                 onTouchStart={(e) => { e.preventDefault(); handleButtonPress('arrowright'); }}
                 onTouchEnd={(e) => { e.preventDefault(); handleButtonRelease('arrowright'); }}
-                onMouseLeave={() => handleButtonRelease('arrowright')}
               >
                 <ArrowRight className="h-6 w-6 md:h-8 md:w-8" />
               </Button>
@@ -326,7 +323,6 @@ export default function CosmicImpactPage() {
               onMouseUp={() => handleButtonRelease('arrowdown')}
               onTouchStart={(e) => { e.preventDefault(); handleButtonPress('arrowdown'); }}
               onTouchEnd={(e) => { e.preventDefault(); handleButtonRelease('arrowdown'); }}
-              onMouseLeave={() => handleButtonRelease('arrowdown')}
             >
               <ArrowDown className="h-6 w-6 md:h-8 md:w-8" />
             </Button>
