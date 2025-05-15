@@ -1,11 +1,9 @@
+
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-
-const geistSans = GeistSans;
-const geistMono = GeistMono;
 
 export const metadata: Metadata = {
   title: 'Cosmic Impact',
@@ -17,8 +15,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const fontVariables = [
+    GeistSans?.variable,
+    GeistMono?.variable,
+  ].filter(Boolean).join(' ');
+
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className={fontVariables}>
       <body className="antialiased">
         {children}
         <Toaster />

@@ -15,8 +15,8 @@ const SPACESHIP_SIZE = 40;
 const ASTEROID_MIN_SIZE = 20;
 const ASTEROID_MAX_SIZE = 60;
 const SPACESHIP_SPEED = 20;
-const ASTEROID_BASE_SPEED = 5.0; // Increased from 3.0
-const INITIAL_LIVES = 3;
+const ASTEROID_BASE_SPEED = 6.0;
+const INITIAL_LIVES = 5;
 const ASTEROID_SPAWN_INTERVAL = 1000; // ms
 const SCORE_INCREMENT_INTERVAL = 1000; // ms, for time-based score
 
