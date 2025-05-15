@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { AsteroidObject } from '@/types';
@@ -8,14 +9,23 @@ interface AsteroidComponentProps {
 }
 
 const Asteroid: React.FC<AsteroidComponentProps> = ({ asteroid }) => {
+  // Generate a somewhat random border radius for a more "rocky" look
+  // This will be consistent for each asteroid once rendered, but different between asteroids
+  // if they were re-rendered with new random values. For now, this is fine as they are spawned.
+  const [dynamicBorderRadius] = React.useState(() => {
+    const r = () => `${Math.random() * 40 + 30}%`; // Random percentage between 30% and 70%
+    return `${r()} ${r()} ${r()} ${r()} / ${r()} ${r()} ${r()} ${r()}`;
+  });
+  
   const asteroidStyle: React.CSSProperties = {
     left: `${asteroid.x}px`,
     top: `${asteroid.y}px`,
     width: `${asteroid.width}px`,
     height: `${asteroid.height}px`,
-    // Using muted-foreground for asteroids (gray)
     backgroundColor: 'hsl(var(--muted-foreground))', 
-    borderRadius: '20%', // Slightly rounded square for asteroid look
+    // Irregular border radius for a more "rocky" look
+    borderRadius: dynamicBorderRadius,
+    boxShadow: 'inset 0 0 5px rgba(0,0,0,0.3)', // Subtle inner shadow for depth
   };
 
   return (

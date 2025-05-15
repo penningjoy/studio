@@ -11,13 +11,13 @@ import { Play } from 'lucide-react';
 
 const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
-const SPACESHIP_SIZE = 30;
+const SPACESHIP_SIZE = 40; // Slightly increased size for the new SVG
 const ASTEROID_MIN_SIZE = 20;
 const ASTEROID_MAX_SIZE = 60;
 const SPACESHIP_SPEED = 20;
-const ASTEROID_BASE_SPEED = 3.0; // Increased from 1.5
+const ASTEROID_BASE_SPEED = 3.0;
 const INITIAL_LIVES = 3;
-const ASTEROID_SPAWN_INTERVAL = 1800; //ms
+const ASTEROID_SPAWN_INTERVAL = 1000; //ms - Increased density
 const SCORE_INCREMENT_INTERVAL = 1000; // ms, for time-based score
 
 const SESSION_STORAGE_HIGH_SCORE_KEY = 'cosmicImpactHighScore';
@@ -46,7 +46,6 @@ export default function CosmicImpactPage() {
   }, []);
 
   const saveHighScore = useCallback((newScore: number) => {
-    // Access highScore via prev state to ensure latest value
     setGameState(prev => {
       if (newScore > prev.highScore) {
         sessionStorage.setItem(SESSION_STORAGE_HIGH_SCORE_KEY, newScore.toString());
@@ -119,7 +118,7 @@ export default function CosmicImpactPage() {
     }
     
     setGameState(prev => {
-      if (!prev.gameStarted || prev.isGameOver) return prev; // Ensure we don't update if game state changed
+      if (!prev.gameStarted || prev.isGameOver) return prev;
       
       let { spaceshipPosition, asteroids, score, lives, isGameOver } = { ...prev };
 
@@ -149,41 +148,21 @@ export default function CosmicImpactPage() {
           lives--;
           if (lives <= 0) {
             isGameOver = true;
-            // Defer saveHighScore to outside setGameState if it also calls setGameState
-            // Or ensure saveHighScore is structured to not cause issues (it is, as it uses prev state)
           }
-          spaceshipPosition = { x: GAME_WIDTH / 2 - SPACESHIP_SIZE / 2, y: GAME_HEIGHT - SPACESHIP_SIZE * 2 };
+          // Reset spaceship position slightly higher to avoid immediate re-collision if multiple asteroids are close
+          spaceshipPosition = { x: GAME_WIDTH / 2 - SPACESHIP_SIZE / 2, y: GAME_HEIGHT - SPACESHIP_SIZE * 2 - 20 };
           return false; 
         }
         return a.y < GAME_HEIGHT; 
       });
       
       asteroids = updatedAsteroids;
-
-      if (Date.now() - lastAsteroidSpawnTime.current > ASTEROID_SPAWN_INTERVAL && !isGameOver) {
-        // spawnAsteroid() will cause a re-render and another call to setGameState.
-        // This is tricky. Better to collect changes and apply once.
-        // For now, let's assume spawnAsteroid's setGameState is fine if it's the last logical step for asteroids array.
-        // To be safer, spawn logic could return the new asteroid and it's added here.
-        // However, the current spawnAsteroid itself calls setGameState.
-        // This means the current 'asteroids' variable might not reflect the spawn if it happens.
-        // Let's defer the spawnAsteroid call to after this setGameState completes, via useEffect dependency or similar.
-        // Or, for simplicity in a game loop, we can directly modify the array to be returned.
-        // The original code structure was:
-        // if (Date.now() - lastAsteroidSpawnTime.current > ASTEROID_SPAWN_INTERVAL) {
-        //   spawnAsteroid(); 
-        //   lastAsteroidSpawnTime.current = Date.now();
-        // }
-        // This is fine because spawnAsteroid() calls setGameState, and the next gameLoop iteration will use the updated state.
-        // So, no direct change needed here for spawn logic, but it's a point of attention in React game loops.
-      }
       
       if (Date.now() - lastScoreIncrementTime.current > SCORE_INCREMENT_INTERVAL && !isGameOver) {
         score += 10; 
         lastScoreIncrementTime.current = Date.now();
       }
       
-      // If game over happened in this tick, save high score
       if (isGameOver && !prev.isGameOver) {
           saveHighScore(score);
       }
@@ -191,7 +170,6 @@ export default function CosmicImpactPage() {
       return { ...prev, spaceshipPosition, asteroids, score, lives, isGameOver };
     });
 
-    // Handle asteroid spawning separately to avoid issues with setGameState within setGameState updater
     if (gameState.gameStarted && !gameState.isGameOver) {
         if (Date.now() - lastAsteroidSpawnTime.current > ASTEROID_SPAWN_INTERVAL) {
             spawnAsteroid();
@@ -200,13 +178,13 @@ export default function CosmicImpactPage() {
     }
 
     gameLoopId.current = requestAnimationFrame(gameLoop);
-  }, [gameState.gameStarted, gameState.isGameOver, spawnAsteroid, saveHighScore]); // Added gameState.isGameOver to dependencies
+  }, [gameState.gameStarted, gameState.isGameOver, spawnAsteroid, saveHighScore]);
 
 
   useEffect(() => {
     if (gameState.gameStarted && !gameState.isGameOver) {
-      lastAsteroidSpawnTime.current = Date.now(); // Reset spawn timer on game start/restart
-      lastScoreIncrementTime.current = Date.now(); // Reset score timer
+      lastAsteroidSpawnTime.current = Date.now(); 
+      lastScoreIncrementTime.current = Date.now(); 
       gameLoopId.current = requestAnimationFrame(gameLoop);
     } else if (gameLoopId.current) {
       cancelAnimationFrame(gameLoopId.current);
