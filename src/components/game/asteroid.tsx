@@ -1,6 +1,7 @@
 
 "use client";
 
+import * as React from 'react';
 import type { AsteroidObject } from '@/types';
 import { cn } from '@/lib/utils';
 
