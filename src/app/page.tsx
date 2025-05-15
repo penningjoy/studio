@@ -11,13 +11,15 @@ import { Play, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const LOGICAL_GAME_WIDTH = 800;
 const LOGICAL_GAME_HEIGHT = 600;
-const SPACESHIP_SIZE = 40;
+const SPACESHIP_SIZE = 50; // Slightly increased for new SVG
 const ASTEROID_MIN_SIZE = 20;
 const ASTEROID_MAX_SIZE = 60;
 const SPACESHIP_SPEED = 20;
-const ASTEROID_BASE_SPEED = 6.0;
-const INITIAL_LIVES = 5;
-const ASTEROID_SPAWN_INTERVAL = 1000; // ms
+const INITIAL_ASTEROID_BASE_SPEED = 2.0; // Renamed and adjusted
+const MAX_ASTEROID_SPEED = 7.0;
+const INITIAL_LIVES = 3;
+const INITIAL_ASTEROID_SPAWN_INTERVAL = 1500; // ms, Renamed
+const MIN_ASTEROID_SPAWN_INTERVAL = 500; // ms
 const SCORE_INCREMENT_INTERVAL = 1000; // ms, for time-based score
 
 const SESSION_STORAGE_HIGH_SCORE_KEY = 'cosmicImpactHighScore';
@@ -46,14 +48,10 @@ export default function CosmicImpactPage() {
   useEffect(() => {
     const updateDimensions = () => {
       const aspectRatio = LOGICAL_GAME_HEIGHT / LOGICAL_GAME_WIDTH;
-      // Constrain width to 95% of viewport or LOGICAL_GAME_WIDTH
       let newWidth = Math.min(window.innerWidth * 0.95, LOGICAL_GAME_WIDTH);
-      // Ensure minimum width for very small screens if necessary, e.g., Math.max(newWidth, 300);
-      
       let newHeight = newWidth * aspectRatio;
 
-      // Further constrain height if it's too tall for the viewport
-      const maxViewportHeight = window.innerHeight * 0.7; // Use 70% of viewport height for game area + controls
+      const maxViewportHeight = window.innerHeight * 0.7; 
       if (newHeight > maxViewportHeight) {
         newHeight = maxViewportHeight;
         newWidth = newHeight / aspectRatio;
@@ -62,7 +60,7 @@ export default function CosmicImpactPage() {
       setActualGameDimensions({ width: newWidth, height: newHeight });
     };
 
-    updateDimensions(); // Initial call
+    updateDimensions();
     window.addEventListener('resize', updateDimensions);
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
@@ -118,6 +116,8 @@ export default function CosmicImpactPage() {
       size,
       width: size,
       height: size,
+      rotation: 0,
+      rotationSpeed: (Math.random() - 0.5) * 4, // Random speed between -2 and 2 deg/frame
     };
     setGameState(prev => ({ ...prev, asteroids: [...prev.asteroids, newAsteroid] }));
   }, []);
@@ -156,6 +156,16 @@ export default function CosmicImpactPage() {
       return;
     }
     
+    const currentScore = gameState.score;
+    const currentAsteroidSpeed = Math.min(
+      MAX_ASTEROID_SPEED,
+      INITIAL_ASTEROID_BASE_SPEED + Math.floor(currentScore / 250) * 0.25 // Speed increases every 250 points
+    );
+    const currentSpawnInterval = Math.max(
+      MIN_ASTEROID_SPAWN_INTERVAL,
+      INITIAL_ASTEROID_SPAWN_INTERVAL - Math.floor(currentScore / 100) * 50 // Interval decreases every 100 points
+    );
+
     setGameState(prev => {
       if (!prev.gameStarted || prev.isGameOver) return prev;
       
@@ -174,7 +184,11 @@ export default function CosmicImpactPage() {
         y: Math.max(0, Math.min(LOGICAL_GAME_HEIGHT - SPACESHIP_SIZE, newY)),
       };
 
-      const updatedAsteroids = asteroids.map(a => ({ ...a, y: a.y + ASTEROID_BASE_SPEED })).filter(a => {
+      const updatedAsteroids = asteroids.map(a => ({ 
+        ...a, 
+        y: a.y + currentAsteroidSpeed,
+        rotation: (a.rotation + a.rotationSpeed) % 360,
+      })).filter(a => {
         const shipRect = { x: spaceshipPosition.x, y: spaceshipPosition.y, width: SPACESHIP_SIZE, height: SPACESHIP_SIZE };
         const asteroidRect = { x: a.x, y: a.y, width: a.width, height: a.height };
 
@@ -188,6 +202,7 @@ export default function CosmicImpactPage() {
           if (lives <= 0) {
             isGameOver = true;
           }
+          // Reset spaceship position slightly higher to avoid immediate re-collision if possible
           spaceshipPosition = { x: LOGICAL_GAME_WIDTH / 2 - SPACESHIP_SIZE / 2, y: LOGICAL_GAME_HEIGHT - SPACESHIP_SIZE * 2 - 20 };
           return false; 
         }
@@ -201,7 +216,7 @@ export default function CosmicImpactPage() {
         lastScoreIncrementTime.current = Date.now();
       }
       
-      if (isGameOver && !prev.isGameOver) {
+      if (isGameOver && !prev.isGameOver) { // Check if game over state just changed
           saveHighScore(score);
       }
 
@@ -209,14 +224,14 @@ export default function CosmicImpactPage() {
     });
 
     if (gameState.gameStarted && !gameState.isGameOver) {
-        if (Date.now() - lastAsteroidSpawnTime.current > ASTEROID_SPAWN_INTERVAL) {
+        if (Date.now() - lastAsteroidSpawnTime.current > currentSpawnInterval) {
             spawnAsteroid();
             lastAsteroidSpawnTime.current = Date.now();
         }
     }
 
     gameLoopId.current = requestAnimationFrame(gameLoop);
-  }, [gameState.gameStarted, gameState.isGameOver, spawnAsteroid, saveHighScore]);
+  }, [gameState.gameStarted, gameState.isGameOver, gameState.score, spawnAsteroid, saveHighScore]);
 
 
   useEffect(() => {

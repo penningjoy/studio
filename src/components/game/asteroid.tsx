@@ -11,14 +11,12 @@ interface AsteroidComponentProps {
 }
 
 const Asteroid: React.FC<AsteroidComponentProps> = ({ asteroid, scale }) => {
-  // Initialize with a static, non-random border radius for SSR and initial client render
   const [dynamicBorderRadius, setDynamicBorderRadius] = React.useState<string>("30% 70% 40% 60% / 60% 40% 70% 30%");
 
   React.useEffect(() => {
-    // Set the random border radius only on the client, after hydration
-    const r = () => `${Math.random() * 40 + 30}%`; // Random percentage between 30% and 70%
+    const r = () => `${Math.random() * 40 + 30}%`;
     setDynamicBorderRadius(`${r()} ${r()} ${r()} ${r()} / ${r()} ${r()} ${r()} ${r()}`);
-  }, []); // Empty dependency array ensures this runs once on mount on the client side
+  }, []); 
 
   const asteroidStyle: React.CSSProperties = {
     left: `${asteroid.x * scale}px`,
@@ -26,8 +24,10 @@ const Asteroid: React.FC<AsteroidComponentProps> = ({ asteroid, scale }) => {
     width: `${asteroid.width * scale}px`,
     height: `${asteroid.height * scale}px`,
     backgroundColor: 'hsl(var(--muted-foreground))', 
-    borderRadius: dynamicBorderRadius, // Use the state variable
-    boxShadow: 'inset 0 0 5px rgba(0,0,0,0.3)', 
+    borderRadius: dynamicBorderRadius,
+    boxShadow: 'inset 0 0 5px rgba(0,0,0,0.3)',
+    transform: `rotate(${asteroid.rotation}deg)`, // Apply rotation
+    transition: 'top 0.05s linear', // Smooth falling, rotation is handled by direct style update
   };
 
   return (
