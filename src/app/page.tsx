@@ -11,14 +11,14 @@ import { Play, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const LOGICAL_GAME_WIDTH = 800;
 const LOGICAL_GAME_HEIGHT = 600;
-const SPACESHIP_SIZE = 50; // Slightly increased for new SVG
+const SPACESHIP_SIZE = 50; 
 const ASTEROID_MIN_SIZE = 20;
 const ASTEROID_MAX_SIZE = 60;
 const SPACESHIP_SPEED = 20;
-const INITIAL_ASTEROID_BASE_SPEED = 2.0; // Renamed and adjusted
+const INITIAL_ASTEROID_BASE_SPEED = 1.0; // Adjusted for initial slower speed
 const MAX_ASTEROID_SPEED = 7.0;
 const INITIAL_LIVES = 3;
-const INITIAL_ASTEROID_SPAWN_INTERVAL = 1500; // ms, Renamed
+const INITIAL_ASTEROID_SPAWN_INTERVAL = 1000; // ms, increased density
 const MIN_ASTEROID_SPAWN_INTERVAL = 500; // ms
 const SCORE_INCREMENT_INTERVAL = 1000; // ms, for time-based score
 
@@ -51,7 +51,8 @@ export default function CosmicImpactPage() {
       let newWidth = Math.min(window.innerWidth * 0.95, LOGICAL_GAME_WIDTH);
       let newHeight = newWidth * aspectRatio;
 
-      const maxViewportHeight = window.innerHeight * 0.7; 
+      const maxGameAreaViewportHeightPercentage = 0.65; // Adjusted from 0.7 to prevent overlap
+      const maxViewportHeight = window.innerHeight * maxGameAreaViewportHeightPercentage; 
       if (newHeight > maxViewportHeight) {
         newHeight = maxViewportHeight;
         newWidth = newHeight / aspectRatio;
