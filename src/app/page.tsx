@@ -44,6 +44,7 @@ export default function CosmicImpactPage() {
   const lastAsteroidSpawnTime = useRef<number>(0);
   const lastScoreIncrementTime = useRef<number>(0);
   const gameLoopId = useRef<number | null>(null);
+  const gameStartTime = useRef<number>(0);
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -89,6 +90,7 @@ export default function CosmicImpactPage() {
   }, [loadHighScore]);
 
   const resetGame = useCallback(() => {
+    gameStartTime.current = Date.now();
     setGameState(prev => ({
       ...prev,
       spaceshipPosition: { x: LOGICAL_GAME_WIDTH / 2 - SPACESHIP_SIZE / 2, y: LOGICAL_GAME_HEIGHT - SPACESHIP_SIZE * 2 },
@@ -107,21 +109,68 @@ export default function CosmicImpactPage() {
     resetGame();
   };
 
-  const spawnAsteroid = useCallback(() => {
+  const spawnAsteroid = useCallback((currentSpeed: number, elapsedSeconds: number) => {
     const size = Math.random() * (ASTEROID_MAX_SIZE - ASTEROID_MIN_SIZE) + ASTEROID_MIN_SIZE;
-    const x = Math.random() * (LOGICAL_GAME_WIDTH - size);
+    
+    let x: number;
+    let y: number;
+    let dx: number;
+    let dy: number;
+
+    const threeMinutes = 3 * 60; // 180 seconds
+
+    if (elapsedSeconds < threeMinutes) {
+        // Spawn from top (original logic for direction)
+        x = Math.random() * (LOGICAL_GAME_WIDTH - size);
+        y = -size; // Starts just above the screen
+        dx = 0;
+        dy = currentSpeed;
+    } else {
+        // Spawn from top, left, or right
+        const side = Math.floor(Math.random() * 3); // 0: top, 1: left, 2: right
+
+        if (side === 0) { // Top
+            x = Math.random() * (LOGICAL_GAME_WIDTH - size);
+            y = -size;
+            dx = 0;
+            dy = currentSpeed;
+        } else if (side === 1) { // Left
+            x = -size; // Starts just off screen to the left
+            y = Math.random() * (LOGICAL_GAME_HEIGHT - size);
+            
+            const targetX = LOGICAL_GAME_WIDTH * (Math.random() * 0.4 + 0.3); 
+            const targetY = LOGICAL_GAME_HEIGHT * (Math.random() * 0.4 + 0.3);
+            
+            const angle = Math.atan2(targetY - (y + size / 2), targetX - (x + size / 2));
+            dx = Math.cos(angle) * currentSpeed;
+            dy = Math.sin(angle) * currentSpeed;
+        } else { // Right (side === 2)
+            x = LOGICAL_GAME_WIDTH; // Starts just off screen to the right
+            y = Math.random() * (LOGICAL_GAME_HEIGHT - size);
+
+            const targetX = LOGICAL_GAME_WIDTH * (Math.random() * 0.4 + 0.3);
+            const targetY = LOGICAL_GAME_HEIGHT * (Math.random() * 0.4 + 0.3);
+
+            const angle = Math.atan2(targetY - (y + size / 2), targetX - (x + size / 2));
+            dx = Math.cos(angle) * currentSpeed;
+            dy = Math.sin(angle) * currentSpeed;
+        }
+    }
+
     const newAsteroid: AsteroidObject = {
       id: crypto.randomUUID(),
       x,
-      y: -size, 
+      y,
       size,
       width: size,
       height: size,
-      rotation: 0,
-      rotationSpeed: (Math.random() - 0.5) * 4, 
+      rotation: (Math.random() - 0.5) * 360, // Random initial rotation
+      rotationSpeed: (Math.random() - 0.5) * 4,
+      dx,
+      dy,
     };
     setGameState(prev => ({ ...prev, asteroids: [...prev.asteroids, newAsteroid] }));
-  }, []);
+  }, [setGameState]);
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     keysPressed.current.add(event.key.toLowerCase());
@@ -156,15 +205,17 @@ export default function CosmicImpactPage() {
       if (gameLoopId.current) cancelAnimationFrame(gameLoopId.current);
       return;
     }
+
+    const elapsedTimeInSeconds = Math.floor((Date.now() - gameStartTime.current) / 1000);
     
-    const currentScore = gameState.score;
+    const currentScore = gameState.score; // currentScore is still available if needed for other logic
     const currentAsteroidSpeed = Math.min(
       MAX_ASTEROID_SPEED,
-      INITIAL_ASTEROID_BASE_SPEED + Math.floor(currentScore / 250) * 0.25 
+      INITIAL_ASTEROID_BASE_SPEED + Math.floor(elapsedTimeInSeconds / 10) * 0.20
     );
     const currentSpawnInterval = Math.max(
       MIN_ASTEROID_SPAWN_INTERVAL,
-      INITIAL_ASTEROID_SPAWN_INTERVAL - Math.floor(currentScore / 100) * 50 
+      INITIAL_ASTEROID_SPAWN_INTERVAL - Math.floor(currentScore / 100) * 50
     );
 
     setGameState(prev => {
@@ -185,9 +236,10 @@ export default function CosmicImpactPage() {
         y: Math.max(0, Math.min(LOGICAL_GAME_HEIGHT - SPACESHIP_SIZE, newY)),
       };
 
-      const updatedAsteroids = asteroids.map(a => ({ 
-        ...a, 
-        y: a.y + currentAsteroidSpeed,
+      const updatedAsteroids = asteroids.map(a => ({
+        ...a,
+        x: a.x + a.dx,
+        y: a.y + a.dy,
         rotation: (a.rotation + a.rotationSpeed) % 360,
       })).filter(a => {
         const shipRect = { x: spaceshipPosition.x, y: spaceshipPosition.y, width: SPACESHIP_SIZE, height: SPACESHIP_SIZE };
@@ -204,10 +256,22 @@ export default function CosmicImpactPage() {
             isGameOver = true;
           }
           
-          spaceshipPosition = { x: LOGICAL_GAME_WIDTH / 2 - SPACESHIP_SIZE / 2, y: LOGICAL_GAME_HEIGHT - SPACESHIP_SIZE * 2 - 20 };
-          return false; 
+          spaceshipPosition = { x: LOGICAL_GAME_WIDTH / 2 - SPACESHIP_SIZE / 2, y: LOGICAL_GAME_HEIGHT - SPACESHIP_SIZE * 2 - 20 }; 
+          return false; // Asteroid hit player, remove it
         }
-        return a.y < LOGICAL_GAME_HEIGHT; 
+
+        // Keep asteroid if it's within the game boundaries
+        const isOffScreenBottom = a.y >= LOGICAL_GAME_HEIGHT;
+        const isOffScreenTop = a.y + a.height <= 0; // If it moved upwards off screen
+        const isOffScreenLeft = a.x + a.width <= 0; // If it moved leftwards off screen
+        const isOffScreenRight = a.x >= LOGICAL_GAME_WIDTH; // If it moved rightwards off screen
+        
+        // Return false to remove the asteroid if it's off screen from any side
+        if (isOffScreenBottom || isOffScreenTop || isOffScreenLeft || isOffScreenRight) {
+          return false;
+        }
+        
+        return true; // Otherwise, keep the asteroid
       });
       
       asteroids = updatedAsteroids;
@@ -226,13 +290,13 @@ export default function CosmicImpactPage() {
 
     if (gameState.gameStarted && !gameState.isGameOver) {
         if (Date.now() - lastAsteroidSpawnTime.current > currentSpawnInterval) {
-            spawnAsteroid();
+            spawnAsteroid(currentAsteroidSpeed, elapsedTimeInSeconds);
             lastAsteroidSpawnTime.current = Date.now();
         }
     }
 
     gameLoopId.current = requestAnimationFrame(gameLoop);
-  }, [gameState.gameStarted, gameState.isGameOver, gameState.score, spawnAsteroid, saveHighScore]);
+  }, [gameState.gameStarted, gameState.isGameOver, gameState.score, spawnAsteroid, saveHighScore, gameStartTime]);
 
 
   useEffect(() => {

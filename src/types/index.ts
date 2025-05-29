@@ -20,6 +20,8 @@ export interface SpaceshipProps {
 export interface AsteroidObject extends GameObject {
   rotation: number;
   rotationSpeed: number;
+  dx: number;
+  dy: number;
 }
 
 export interface GameState {
